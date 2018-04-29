@@ -1,5 +1,4 @@
 # ITB-HiveWar
-Into the Breach Mod - Hive War
 
 This project is a mod for Into The Breach, a recently released turn-based strategy game about humans from the future time travelling into the past to fight giant creatures crawling up from the underground. The mod adds a new enemy type that is not only significantly harder than existing enemies, but also periodically upgrades as the player moves through the game. This is a big project as the base game does not support such an upgrade system, and I need to create it from scratch (still WIP). The enemy also has the unique ability to attack on the player's turn, something else that is not normally supported. That functionality can be found in the ITB-ReflexiveFire repository.
 
