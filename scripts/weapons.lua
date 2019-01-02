@@ -1,15 +1,24 @@
+
+local function EvoCheck(evo)
+	if GAME.HW_Evolutions ~= nil then
+		for _,v in pairs(GAME.HW_Evolutions) do
+			if v == evo then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 ------------------------------------------------------
 --        		      WEAPONRY						--
 ------------------------------------------------------
 --Reave
 Reave = {
+	GetDamage = function() return GAME.HW_ReaveDmg or 1 end,
 	PathSize = 1,
 	Icon = "weapons/enemy_scorpion1.png",	
-	Damage = 1,
 	PreDamage = 0,
-	Web = 0,
-	Acid = 0,
-	Push = 0,
 	Class = "Enemy",
 	LaunchSound = "",
 	SoundBase = "/enemy/scorpion_soldier_1",
@@ -24,15 +33,26 @@ Reave = Skill:new(Reave)
 
 function Reave:GetTargetScore(p1,p2)
 	local effect = SkillEffect()
+	local island = GetSector()
 	
-	-- GOTTA GET THOSE DAMN TIME TRAVELLERS' TREASURES
+	-- GOTTA GET THOSE TIME TRAVELLERS' TREASURES
 	if Board:IsPod(p2) then
 		return 100
 	end
-	LOG(GAME.HW_PodHolder)
+	
 	if GAME.HW_PodHolder ~= nil and Board:GetPawn(p2) ~= nil then
 		if Board:GetPawn(p2):GetId() == GAME.HW_PodHolder then
 			return 100
+		end
+	end
+	
+	-- don't flame units without repair
+	if EvoCheck("RVFire") then
+		local pawn = Board:GetPawn(p2)
+		if pawn ~= nil then
+			if not pawn:IsMech() then
+				return -100
+			end
 		end
 	end
 		
@@ -42,17 +62,30 @@ end
 function Reave:GetSkillEffect(p1, p2)
 	local ret = SkillEffect()
 	local direction = GetDirection(p2 - p1)
-	local damage = SpaceDamage(p2, self.Damage)
+	local damage = SpaceDamage(p2, self.GetDamage())
+	local island = GetSector()
 	
-	if self.Web == 1 then
-		local sound = SpaceDamage(p2)
+	if EvoCheck("RVWeb") then
+		local predam = SpaceDamage(p2)
+		ret:AddDamage(predam)
+		ret:AddDelay(0.2)
 		ret:AddDamage(SoundEffect(p2,self.SoundBase.."/attack_web"))
 		ret:AddGrapple(p1,p2,"hold")
+		ret:AddDelay(0.2)
 	end
-		
-	damage = SpaceDamage(p2, self.Damage)
+	if EvoCheck("RVFire") then
+		local predam = SpaceDamage(p2)
+		if Board:IsPod(p2) == false then
+			predam.iFire = 1
+		end
+		predam.sAnimation = "flamethrower1_"..direction
+		predam.sSound = "/weapons/flamethrower"
+		ret:AddDamage(predam)
+		ret:AddDelay(0.2)
+	end
+
+	damage = SpaceDamage(p2, self.GetDamage())
 	damage.sAnimation = "SwipeClaw2"
-	damage.iAcid = self.Acid
 	damage.sSound = "/enemy/beetle_2/attack_impact"
 	ret:AddQueuedMelee(p1,damage)
 	
@@ -62,11 +95,8 @@ end
 -------------------------------------------------------
 --Biocannon
 Biocannon = 	{
-	Damage = 2,
+	GetDamage = function() return GAME.HW_BioDmg or 2 end,
 	PathSize = 1,
-	Fire = 0,
-	Freeze = 0,
-	Acid = 0,
 	Splash = 0,
 	Class = "Enemy",
 	Icon = "weapons/ranged_rainingvolley.png",
@@ -109,21 +139,15 @@ function Biocannon:GetSkillEffect(p1,p2)
 	local ret = SkillEffect()
 	local dir = GetDirection(p2 - p1)
 	local target = GetProjectileEnd(p1,p2)
-	local damage = SpaceDamage(target, self.Damage)
+	local damage = SpaceDamage(target, self.GetDamage())
 	
-	damage = SpaceDamage(target, self.Damage)
-	ret:AddProjectile(damage, self.Projectile)
-	
-	if self.Splash == 1 then
-		local damage1 = SpaceDamage(target + DIR_VECTORS[(dir)% 4])
-		local damage2 = SpaceDamage(target - DIR_VECTORS[(dir)% 4])
-		local damage3 = SpaceDamage(target + DIR_VECTORS[(dir + 1)% 4])
-		local damage4 = SpaceDamage(target + DIR_VECTORS[(dir - 1)% 4])
-		ret:AddQueuedDamage(damage1)
-		ret:AddQueuedDamage(damage2)
-		ret:AddQueuedDamage(damage3)
-		ret:AddQueuedDamage(damage4)
+	if EvoCheck("BCAcid") then
+		damage.iAcid = 1
+	else
+		damage.iAcid = 0
 	end
+	
+	ret:AddProjectile(damage, self.Projectile)
 	
 	return ret
 end

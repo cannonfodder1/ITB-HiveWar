@@ -9,26 +9,39 @@ function ScorePositioning(point, pawn)
     return originalScorePositioning(point, pawn)
 end
 
+local function EvoCheck(evo)
+	if GAME.HW_Evolutions ~= nil then
+		for _,v in pairs(GAME.HW_Evolutions) do
+			if v == evo then
+				return true
+			end
+		end
+	end
+	return false
+end
+	
 -------------------------
 
 HiveWarrior = {
-	Health = 5,
 	Name = "Hive Warrior",
 	Image = "HiveWarrior",
 	ImageOffset = 0,
-	MoveSpeed = 3,
+	GetHealth = function() return GAME.HW_Health or 5 end,
+	GetMoveSpeed = function() return GAME.HW_Move or 3 end,
 	-- Enable Reflex Fire on this unit
 	Overwatch = {
 		Range = 3, -- range in tiles
 		ShotsTotal = 1, -- total shots this unit can take per turn
-		ShotsPerPawn = 1, -- how many shots on a single mech the unit can take each turn
+		ShotsPerPawn = 99, -- how many shots on a single mech the unit can take each turn
 		WeaponSlot = 2, -- the slot of the weapon that we want to fire
 	},
 	Massive = true,
+	GetArmor = function() return EvoCheck("HWArmor") or false end,
 	DefaultTeam = TEAM_ENEMY,
 	SkillList = { "Reave", "Biocannon" },
 	ImpactMaterial = IMPACT_INSECT,
 	SoundLocation = "/enemy/scorpion_2/",
+	Portrait = "enemy/hivewarrior_portrait"
 }
 AddPawn("HiveWarrior")
 
@@ -96,30 +109,16 @@ function HiveWarrior:ScorePositioning(point, pawn)
 		if Board:GetTerrain(target) == TERRAIN_LAVA then rangedScore = rangedScore - 5 end
 		
 		-- Don't stand anywhere near the horrible shit
-		target2 = target + DIR_VECTORS[dir]
+		for dir = DIR_START, DIR_END do
+			targetadjacent = target + DIR_VECTORS[dir]
+			if targetadjacent ~= target then
+				if Board:IsDangerous(targetadjacent) then rangedScore = rangedScore - 10 end -- Danger marker for Volcano Island environmental hazards
+			
+				if Board:IsEnvironmentDanger(targetadjacent) then rangedScore = rangedScore - 10 end -- Danger marker for other environmental hazards
 		
-		if Board:IsDangerous(target2) then rangedScore = rangedScore - 10 end -- Danger marker for Volcano Island environmental hazards
-		
-		if Board:IsEnvironmentDanger(target2) then rangedScore = rangedScore - 10 end -- Danger marker for other environmental hazards
-	
-		if Board:IsDangerousItem(target2) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
-		--[[
-		target3 = target + DIR_VECTORS[dir+1]
-		
-		if Board:IsDangerous(target3) then rangedScore = rangedScore - 10 end -- Danger marker for Volcano Island environmental hazards
-		
-		if Board:IsEnvironmentDanger(target3) then rangedScore = rangedScore - 10 end -- Danger marker for other environmental hazards
-	
-		if Board:IsDangerousItem(target3) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
-		
-		target4 = target + DIR_VECTORS[dir-1]
-		
-		if Board:IsDangerous(target4) then rangedScore = rangedScore - 10 end -- Danger marker for Volcano Island environmental hazards
-		
-		if Board:IsEnvironmentDanger(target4) then rangedScore = rangedScore - 10 end -- Danger marker for other environmental hazards
-	
-		if Board:IsDangerousItem(target4) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
-		--]]
+				--if Board:IsDangerousItem(targetadjacent) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
+			end
+		end
 	end
 	
 	local edge1 = point.x == 0 or point.x == 7
