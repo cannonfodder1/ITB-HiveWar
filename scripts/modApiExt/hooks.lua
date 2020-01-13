@@ -48,6 +48,18 @@ function hooks:addPawnMoveEndHook(fn)
 	table.insert(self.pawnMoveEndHooks,fn)
 end
 
+hooks.vekMoveStartHooks = {}
+function hooks:addVekMoveStartHook(fn)
+	assert(type(fn) == "function")
+	table.insert(self.vekMoveStartHooks,fn)
+end
+
+hooks.vekMoveEndHooks = {}
+function hooks:addVekMoveEndHook(fn)
+	assert(type(fn) == "function")
+	table.insert(self.vekMoveEndHooks,fn)
+end
+
 hooks.pawnPositionChangedHooks = {}
 function hooks:addPawnPositionChangedHook(fn)
 	assert(type(fn) == "function")
@@ -88,6 +100,12 @@ hooks.pawnKilledHooks = {}
 function hooks:addPawnKilledHook(fn)
 	assert(type(fn) == "function")
 	table.insert(self.pawnKilledHooks,fn)
+end
+
+hooks.pawnRevivedHooks = {}
+function hooks:addPawnRevivedHook(fn)
+	assert(type(fn) == "function")
+	table.insert(self.pawnRevivedHooks,fn)
 end
 
 hooks.pawnIsFireHooks = {}
@@ -136,6 +154,12 @@ hooks.buildingDestroyedHooks = {}
 function hooks:addBuildingDestroyedHook(fn)
 	assert(type(fn) == "function")
 	table.insert(self.buildingDestroyedHooks,fn)
+end
+
+hooks.buildingShieldHooks = {}
+function hooks:addBuildingShieldHook(fn)
+	assert(type(fn) == "function")
+	table.insert(self.buildingShieldHooks,fn)
 end
 
 hooks.skillStartHooks = {}
@@ -210,34 +234,10 @@ function hooks:addPodCollectedHook(fn)
 	table.insert(self.podCollectedHooks,fn)
 end
 
---[[
-	Executes the function on the game's next update step. Only works during missions.
-	
-	Calling this while during game loop (either in a function called from missionUpdate,
-	or as a result of previous runLater) will correctly schedule the function to be
-	invoked during the next update step (not the current one).
---]]
-function hooks:runLater(f)
-	assert(type(f) == "function")
-
-	if not modApiExt_internal.runLaterQueue then
-		modApiExt_internal.runLaterQueue = {}
-	end
-
-	table.insert(modApiExt_internal.runLaterQueue, f)
-end
-
-function hooks:clearHooks()
-	local endswith = function(str, suffix)
-		return suffix == "" or string.sub(str,-string.len(suffix)) == suffix
-	end
-
-	-- too lazy to update this function with new hooks every time
-	for k, v in pairs(self) do
-		if type(v) == "table" and endswith(k, "Hooks") then
-			self[k] = {}
-		end
-	end
+hooks.mostRecentResolvedHooks = {}
+function hooks:addMostRecentResolvedHook(fn)
+	assert(type(fn) == "function")
+	table.insert(self.mostRecentResolvedHooks,fn)
 end
 
 return hooks

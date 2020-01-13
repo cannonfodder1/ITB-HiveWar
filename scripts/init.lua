@@ -1,3 +1,9 @@
+--[[
+TODO LIST
+- better AI
+- more dialog lines
+--]]
+
 local Wolf_HWInfo = nil
 local function init(self)
 	-- Load up the Mod API Extension
@@ -11,24 +17,59 @@ local function init(self)
 		HiveWar_modApiExt = require(extDir.."modApiExt")
 		HiveWar_modApiExt:init(extDir)
 	end
+	
+	-- Load up the Achievement API
+	HiveWar_achvApi = require(self.scriptPath .."achievements/api")
+	local chievo = {}
+	
+	local path = mod_loader.mods[modApi.currentMod].resourcePath
+	local imgs = {
+		"finalkill",
+		"pentakill",
+		"tenpower",
+		"ralphkill",
+		"friendlyfire",
+		"silentkill",
+		"nopodvictory",
+		"swapmaster"
+	}
 
+	for _, img in ipairs(imgs) do
+		modApi:appendAsset("img/achievements/".. img ..".png", path .."resources/achievements/".. img ..".png")
+		modApi:appendAsset("img/achievements/".. img .."_gray.png", path .."resources/achievements/".. img .."_gray.png")
+	end
+
+	chievo = { id = "HW_FinalKill", name = "Unbreached", tip = "Kill the Hive Warrior by defeating it inside the Hive caverns", img = "img/achievements/finalkill.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_PentaKill", name = "Hive Collapse", tip = "Defeat the Hive Warrior four times then kill it, all in a single timeline", img = "img/achievements/pentakill.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_TenPower", name = "Light the Darkness", tip = "Enter the Hive caverns with 10 full bars of Grid Power", img = "img/achievements/tenpower.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_Nostophobia", name = "Off the Beaten Path", tip = "Win a victory without possessing any of the squad's original weapons", img = "img/achievements/swapmaster.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_RalphKill", name = "Cosmic Rivalry", tip = "Land the killing blow on the Hive Warrior with Ralph Karlsson", img = "img/achievements/ralphkill.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_SilentKill", name = "Can't Touch This", tip = "Defeat the Hive Warrior without any reflex shots being fired", img = "img/achievements/silentkill.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_FriendlyFire", name = "My Finger Slipped", tip = "Kill a Vek with a shot from the Hive Warrior's Biocannon", img = "img/achievements/friendlyfire.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	chievo = { id = "HW_NoPodVictory", name = "Comeback Kings", tip = "Win a victory after letting the Hive Warrior destroy four timepods", img = "img/achievements/nopodvictory.png" }
+	HiveWar_achvApi:AddChievo(chievo)
+	
+	menu_images = {
+		"Loading_bar",
+		"Loading_bar_mask",
+		"Loading_main",
+		"title_large",
+	}
+	
+	for i, name in ipairs(menu_images) do
+		modApi:appendAsset("img/main_menus/"..name..".png", self.resourcePath.."resources/main_menus/"..name..".png")
+	end
+	
 	-- Add new sprites with the Fully Unified Resource Loader
 	FURL = require(self.scriptPath.."FURL")
 	FURL(self, {
-	{
-		Type = "enemy",
-        Name = "HiveWarrior",
-        Filename = "hivewarrior",
-		Path = "resources/units", 
-		ResourcePath = "units/aliens",
-		Height = 1,
-
-        Default =           { PosX = -20, PosY = -10 },
-        Animated =          { PosX = -20, PosY = -10, NumFrames = 12 },
-        Emerge =            { PosX = -20, PosY = -10, NumFrames = 8 },
-		Submerged =			{ PosX = -20, PosY = -6 },
-        Death =             { PosX = -20, PosY = -10, NumFrames = 8 },
-	},
 	{
         Type = "base",
         Filename = "timebreach",
@@ -64,12 +105,6 @@ local function init(self)
 	},
 	{
         Type = "base",
-        Filename = "hivewarrior_portrait",
-		Path = "resources/units",
-		ResourcePath = "portraits/enemy",
-	},
-	{
-        Type = "base",
         Filename = "icon_adapt",
 		Path = "resources/effects",
 		ResourcePath = "combat/icons",
@@ -79,41 +114,135 @@ local function init(self)
         Filename = "icon_adapt_glow",
 		Path = "resources/effects",
 		ResourcePath = "combat/icons",
+	},
+	{
+        Type = "base",
+        Filename = "reflexmark",
+		Path = "resources/icons", 
+		ResourcePath = "combat/tile_icon",
+	},
+	{
+        Type = "base",
+        Filename = "hwportrait_classic",
+		Path = "resources/units",
+		ResourcePath = "portraits/enemy",
+	},
+	{
+        Type = "base",
+        Filename = "hwportrait_normal",
+		Path = "resources/units",
+		ResourcePath = "portraits/enemy",
+	},
+	{
+        Type = "base",
+        Filename = "hwportrait_firelit",
+		Path = "resources/units",
+		ResourcePath = "portraits/enemy",
+	},
+	{
+        Type = "base",
+        Filename = "passive_adaptation",
+		Path = "resources/weapons", 
+		ResourcePath = "weapons/passives",
+	},
+	{
+        Type = "base",
+        Filename = "prime_overload",
+		Path = "resources/weapons", 
+		ResourcePath = "weapons",
+	},
+	{
+        Type = "base",
+        Filename = "passive_servoevade",
+		Path = "resources/weapons", 
+		ResourcePath = "weapons/passives",
+	},
+	{
+        Type = "base",
+        Filename = "science_timeskip",
+		Path = "resources/weapons", 
+		ResourcePath = "weapons",
+	},
+	{
+		Type = "enemy",
+        Name = "HiveGuard",
+        Filename = "hiveguard",
+		Path = "resources/units", 
+		ResourcePath = "units/aliens",
+		Height = 1,
+
+        Default =           { PosX = -18, PosY = -2 },
+        Animated =          { PosX = -18, PosY = -2, NumFrames = 4 },
+        Emerge =            { PosX = 0, PosY = 0, NumFrames = 8 },
+        Death =             { PosX = 0, PosY = 0, NumFrames = 8 },
 	}
 	});
-	--[[
+	
+	-- Add new sprites with the Hive Warrior Resource Loader
+	HWRL = require(self.scriptPath.."HWRL")
+	HWRL(self);
+	
+	-- Add the config option for the info panel hotkey
 	modApi:addGenerationOption(
-		"hotkey", "Toggle Hotkey",
-		"The hotkey used to toggle the overlay.",
+		"hotkey", "Info Panel Hotkey",
+		"The hotkey used to toggle the Hive Warrior's information panel",
 		{
-			strings = { "W" },
-			values = { 0x77 },
+			strings = { "W", "H", "F1", "F2", "F3" },
+			values = { 0x77, 0x68, 0x4000003A, 0x4000003B, 0x4000003C },
 			value = 0x77
 		}
 	)
-	]]
+	
+	-- Add the config option for the HW portrait
+	modApi:addGenerationOption(
+		"portrait", "Hive Warrior Portrait",
+		"The portrait image used by the Hive Warrior - REQUIRES NEW TIMELINE TO TAKE EFFECT",
+		{
+			strings = { "Classic Firelit", "Redux Sunlit", "Redux Firelit" },
+			values = { "hwportrait_classic", "hwportrait_normal", "hwportrait_firelit" },
+			value = "hwportrait_normal"
+		}
+	)
+	
+	if modApi:readProfileData("Wolf_Weaponry") == nil then
+		--LOG("HIVE WAR PROFILE DATA NOT FOUND!")
+		Wolf_ProfileWeapons = {}
+		modApi:writeProfileData("Wolf_Weaponry", Wolf_ProfileWeapons)
+	else
+		--LOG("HIVE WAR LOADING FROM PROFILE!")
+		Wolf_ProfileWeapons = modApi:readProfileData("Wolf_Weaponry")
+	end
+	
+	require(self.scriptPath.."profiledata")
+	Wolf_InitializeWeaponry()
+	
+	require(self.scriptPath.."deco_HWcheckbox")
 	local uiModule = require(self.scriptPath.."ui")
 
 	Wolf_HWInfo = uiModule.Wolf_HWInfo
 	Wolf_HWInfo:init(self)
 	Wolf_HWInfo.visible = false
+	
+	Wolf_PrepTimeline = uiModule.Wolf_PrepTimeline
+	Wolf_PrepTimeline:init(self)
+	Wolf_PrepTimeline.visible = false
 
+	sdlext.addUiRootCreatedHook(function(screen, uiRoot)
+		Wolf_HWInfo:create(screen, uiRoot)
+			:bringToTop()
+		Wolf_PrepTimeline:create(screen, uiRoot)
+			--:bringToTop()
+	end)
+	
 	Wolf_HWBreach = uiModule.Wolf_HWBreach
 	Wolf_HWBreach:init(self)
 
-	sdlext.addUiRootCreatedHook(function(screen, uiRoot)
-		-- create the UI element
-		Wolf_HWInfo:create(screen, uiRoot)
-			-- make sure it's not hidden behind other elements
-			:bringToTop()
-	end)
-	
 	sdlext.addPostKeyUpHook(function(keycode)
-		if Game and keycode == Wolf_HWInfo.hotkey then
+		if sdlext.isGame and keycode == Wolf_HWInfo.hotkey then
 			Wolf_HWInfo.visible = not Wolf_HWInfo.visible
 			return true
 		end
-		if not Game and keycode == Wolf_HWInfo.hotkey then
+		if not sdlext.isGame and keycode == Wolf_HWInfo.hotkey then
 			Wolf_HWInfo.visible = false
 			return true
 		end
@@ -122,13 +251,15 @@ local function init(self)
 end
 
 local function load(self,options,version)
-	Wolf_HWInfo.hotkey = 0x77--options["hotkey"].value
+	Wolf_HWInfo.hotkey = options["hotkey"].value
+	Wolf_HiveWarriorPortrait = options["portrait"].value
 	-- load up the rest of the mod
 	modApi:addWeapon_Texts(require(self.scriptPath.."text"))
 	require(self.scriptPath.."weapons")
 	require(self.scriptPath.."pawns")
-	require(self.scriptPath.."items")
 	require(self.scriptPath.."missions")
+	require(self.scriptPath.."dialogs")
+	require(self.scriptPath.."personalities")
 	
 	HiveWar_modApiExt:load(self, options, version)
 	-- Create the code hooks needed for our mod
@@ -141,6 +272,7 @@ local function load(self,options,version)
 	modApi:addPreMissionAvailableHook(hook.preMissionAvailableHook)
 	modApi:addMissionEndHook(hook.missionEndHook)
 	modApi:addPostStartGameHook(hook.postStartGameHook)
+	modApi:addMissionNextPhaseCreatedHook(hook.missionNextPhaseCreatedHook)
 	HiveWar_modApiExt:addPodDetectedHook(hook.podDetectedHook)
 	HiveWar_modApiExt:addPodLandedHook(hook.podLandedHook)
 	HiveWar_modApiExt:addPodTrampledHook(hook.podTrampledHook)
@@ -157,13 +289,31 @@ local function load(self,options,version)
 	HiveWar_modApiExt:addSkillEndHook(hook.skillEndHook)
 	HiveWar_modApiExt:addQueuedSkillEndHook(hook.queuedSkillEndHook)
 	HiveWar_modApiExt:addPawnKilledHook(hook.pawnKilledHook)
+	
+	-- Create the code hooks needed for the reflex shot
+	-- We need a variety of hooks from both the Mod Loader and the Mod API Extension
+	local tileState = require(self.scriptPath .."tileState")("Wolf_HW")
+	local pawnState = require(self.scriptPath .."pawnState")("Wolf_HW")
+	local overwatch = require(self.scriptPath.."overwatch")
+	overwatch.onLoad(tileState, pawnState)
+	modApi:addNextTurnHook(overwatch.newTurnHook)
+	modApi:addMissionStartHook(overwatch.missionStartHook)
+	modApi:addMissionUpdateHook(overwatch.missionUpdateHook)
+	modApi:addTestMechEnteredHook(overwatch.missionStartHook)
+	HiveWar_modApiExt:addPawnTrackedHook(overwatch.pawnTrackedHook)
+	HiveWar_modApiExt:addPawnUntrackedHook(overwatch.pawnUntrackedHook)
+	HiveWar_modApiExt:addPawnMoveStartHook(overwatch.pawnMoveStartHook)
+	HiveWar_modApiExt:addPawnMoveEndHook(overwatch.pawnMoveEndHook)
+	HiveWar_modApiExt:addPawnUndoMoveHook(overwatch.pawnUndoMoveHook)
+	HiveWar_modApiExt:addPawnPositionChangedHook(overwatch.pawnPositionChangedHook)
+	HiveWar_modApiExt:addSkillEndHook(overwatch.skillEndHook)
 end
 
 return {
 	id = "Wolf_HiveWar",
 	name = "Hive War",
-	version = "0.6.0",
-	requirements = {},
+	version = "1.0.0",
+	requirements = { "kf_ModUtils" },
 	icon = "resources/mod_icon.png",
 	init = init,
 	load = load,

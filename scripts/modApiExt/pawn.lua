@@ -46,7 +46,7 @@ function pawn:safeDamage(pawn, spaceDamage)
 	local wasOnBoard = self.board:isPawnOnBoard(pawn)
 
 	local pawnSpace = pawn:GetSpace()
-	local safeSpace = self.board:getUnoccupiedRestorableSpace()
+	local safeSpace = self.board:getSafeSpace()
 
 	local terrainData = self.board:getRestorableTerrainData(safeSpace)
 
@@ -54,9 +54,15 @@ function pawn:safeDamage(pawn, spaceDamage)
 		Board:AddPawn(pawn, safeSpace)
 	end
 
+	-- Set to water first to get rid of potential fire on the tile
+	Board:SetTerrain(safeSpace, TERRAIN_WATER)
 	-- change it to basic terrain so we don't trigger sounds if it's
 	-- sand or forest tile or other.
 	Board:SetTerrain(safeSpace, TERRAIN_ROAD)
+	-- Pawns get affected by acid if moved onto an acid tile
+	-- (even though technically they shouldn't, since the pawn doesn't
+	-- stand on the tile during missionUpdate step?)
+	Board:SetAcid(safeSpace, false)
 
 	pawn:SetSpace(safeSpace)
 
@@ -154,7 +160,7 @@ end
 function pawn:getSavedataTable(pawnId, sourceTable)
 	if sourceTable then
 		for k, v in pairs(sourceTable) do
-			if type(v) == "table" and v.id and self.string:startsWith(k, "pawn") then
+			if type(v) == "table" and v.id and modApi:stringStartsWith(k, "pawn") then
 				if v.id == pawnId then return v end
 			end
 		end	
@@ -176,22 +182,73 @@ function pawn:getWeaponData(ptable, field)
 	assert(field == "primary" or field == "secondary")
 	local t = {}
 
-	t.id = ptable[field]
-	t.power = ptable[field.."_power"]
-	t.upgrade1 = ptable[field.."_mod1"]
-	t.upgrade2 = ptable[field.."_mod2"]
+	if ptable then
+		t.id = ptable[field]
+		t.power = ptable[field.."_power"]
+		t.upgrade1 = ptable[field.."_mod1"]
+		t.upgrade2 = ptable[field.."_mod2"]
+	end
 
 	return t
+end
+
+local function isPowered(upgrade)
+	return upgrade and (#upgrade == 0 or (upgrade[1] and upgrade[1] > 0))
+end
+
+local function getUpgradeSuffix(wtable)
+	local hasUpgradeA = isPowered(wtable.upgrade1)
+	local hasUpgradeB = isPowered(wtable.upgrade2)
+
+	if hasUpgradeA and hasUpgradeB then
+		return "_AB"
+	elseif hasUpgradeA then
+		return "_A"
+	elseif hasUpgradeB then
+		return "_B"
+	end
+
+	return ""
 end
 
 function pawn:getWeapons(pawnId)
 	local ptable = self:getSavedataTable(pawnId)
 	local t = {}
 
-	t[1] = self:getWeaponData(ptable, "primary").id
-	t[2] = self:getWeaponData(ptable, "secondary").id
+	local primary = self:getWeaponData(ptable, "primary")
+	local secondary = self:getWeaponData(ptable, "secondary")
+
+	if primary.id then
+		t[1] = primary.id .. getUpgradeSuffix(primary)
+	end
+	if secondary.id then
+		t[2] = secondary.id .. getUpgradeSuffix(secondary)
+	end
 
 	return t
+end
+
+--[[
+	Returns a table holding information about the pilot of the pawn.
+	Returns nil if the pawn is not piloted (eg. vek, mechs whose pilot is dead, etc.)
+--]]
+function pawn:getPilotTable(pawnId)
+	local ptable = self:getSavedataTable(pawnId)
+
+	return ptable.pilot
+end
+
+--[[
+	Returns id of the pilot piloting this pawn, or "Pilot_Artificial" if
+	it's not piloted.
+--]]
+function pawn:getPilotId(pawnId)
+	local pilot = self:getPilotTable(pawnId)
+	if pilot then
+		return pilot.id
+	else
+		return "Pilot_Artificial"
+	end
 end
 
 return pawn

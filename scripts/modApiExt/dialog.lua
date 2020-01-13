@@ -120,7 +120,6 @@ function dialog:triggerRuledDialog(dialogEvent, protoCast, customOdds)
 
 	-- No dialogs registered for this event, so just ignore it.
 	if not modApiExt_internal.ruledDialogs[dialogEvent] then
-		LOG("Had no table defined for " .. dialogEvent .. ". Please tell kartoFlane.")
 		return false
 	end
 
@@ -188,9 +187,7 @@ function dialog:triggerRuledDialog(dialogEvent, protoCast, customOdds)
 	end
 
 	if #candidates > 0 then
-		-- Pick a candidate at random
-		-- TODO maybe weigh by odds of occurring? but then 100% dialogs
-		-- become problematic
+		-- Pick a candidate at random (among registered ruled dialogs)
 		local dialog = random_element(candidates)
 
 		local eventInfo = dialog.eventInfo
@@ -204,6 +201,7 @@ function dialog:triggerRuledDialog(dialogEvent, protoCast, customOdds)
 			table.insert(GAME.uniqueRuledDialogs, hash_o(eventInfo))
 		end
 
+		-- Pick a random dialog set inside the ruled dialog
 		local selectedDialog = random_element(eventInfo)
 
 		if #selectedDialog == 0 then

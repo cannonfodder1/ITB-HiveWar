@@ -50,7 +50,9 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 				pawn = modApiExt_internal.pawns[id]
 			end
 
-			if pawn then
+			-- Make sure we didn't get a pawn that was already deleted,
+			-- in which case the userdata points to an invalid block of memory
+			if pawn and pawn:GetId() == id then
 				if not pd then
 					-- Pawn is not tracked yet
 					-- Create an empty table for its tracked fields
@@ -102,7 +104,7 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 
 					pd.curHealth = hp
 				end
-				
+
 				local isFire = pawn:IsFire()
 				if pd.isFire ~= isFire then
 					if isFire then
@@ -114,7 +116,7 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 					
 					pd.isFire = isFire
 				end
-				
+
 				local isAcid = pawn:IsAcid()
 				if pd.isAcid ~= isAcid then
 					if isAcid then
@@ -126,7 +128,7 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 					
 					pd.isAcid = isAcid
 				end
-				
+
 				local isFrozen = pawn:IsFrozen()
 				if pd.isFrozen ~= isFrozen then
 					if isFrozen then
@@ -138,7 +140,7 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 					
 					pd.isFrozen = isFrozen
 				end
-				
+
 				local isGrappled = pawn:IsGrappled()
 				if pd.isGrappled ~= isGrappled then
 					if isGrappled then
@@ -150,7 +152,7 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 					
 					pd.isGrappled = isGrappled
 				end
-				
+
 				local isShield = pawn:IsShield()
 				if pd.isShield ~= isShield then
 					if isShield then
@@ -170,9 +172,41 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 
 					pd.selected = false
 				end
+
+				if
+					Pawn and Pawn:GetId() == id and
+					Pawn:IsSelected() and not pd.selected and
+					Pawn:IsActive() and
+					Pawn:GetTeam() == TEAM_ENEMY and
+					Game:GetTeamTurn() == TEAM_ENEMY
+				then
+					-- Vek movement detection
+					if modApiExt_internal.scheduledMovePawns[id] == nil then
+						modApiExt_internal.scheduledMovePawns[id] = Pawn:GetSpace()
+
+						modApiExt_internal.fireVekMoveStartHooks(modApiExt_internal.mission, pawn)
+
+						modApi:conditionalHook(
+							function()
+								return modApiExt_internal.scheduledMovePawns[id] and
+								      (not Board:IsBusy() or not Pawn or Pawn:GetId() ~= id or not pd.selected)
+									
+							end,
+							function()
+								modApiExt_internal.fireVekMoveEndHooks(
+									modApiExt_internal.mission, pawn,
+									modApiExt_internal.scheduledMovePawns[id],
+									pawn:GetSpace()
+								)
+								modApiExt_internal.scheduledMovePawns[id] = nil
+							end
+						)
+					end
+				end
 			else
-				-- Pawn was nil? Some bizarre edge case.
-				-- Can't do anything with this, ignore.
+				-- pawn was nil or invalid, remove this entry
+				GAME.trackedPawns[id] = nil
+				modApiExt_internal.pawns[id] = nil
 			end
 		end
 
@@ -192,6 +226,12 @@ function modApiExtHooks:trackAndUpdatePawns(mission)
 					pd.dead = true
 					self.dialog:triggerRuledDialog("PawnKilled", { target = id })
 					modApiExt_internal.firePawnKilledHooks(mission, pawn)
+				end
+
+				if pd.dead and pd.curHealth ~= 0 then
+					pd.dead = false
+					self.dialog:triggerRuledDialog("PawnRevived", { target = id })
+					modApiExt_internal.firePawnRevivedHooks(mission, pawn)
 				end
 
 				-- Treat pawns not registered in the onBoard table as on board.
@@ -221,12 +261,13 @@ function modApiExtHooks:trackAndUpdateBuildings(mission)
 
 		local w = Board:GetSize().x
 		for i, point in pairs(tbl) do
-			local idx = point.y * w + point.x
+			local idx = p2idx(point, w)
 			if not GAME.trackedBuildings[idx] then
 				-- Building not tracked yet
 				GAME.trackedBuildings[idx] = {
 					loc = point,
-					destroyed = false
+					destroyed = false,
+					shield = false,
 				}
 			else
 				-- Already tracked, update its data...
@@ -254,17 +295,13 @@ function modApiExtHooks:updateTiles()
 		local mtile = mouseTile()
 		if modApiExt_internal.currentTile ~= mtile then
 			if modApiExt_internal.currentTile then -- could be nil
-				for i, hook in ipairs(self.tileUnhighlightedHooks) do
-					hook(mission, modApiExt_internal.currentTile)
-				end
+				modApiExt_internal.fireTileUnhighlightedHooks(mission, modApiExt_internal.currentTile)
 			end
 
 			modApiExt_internal.currentTile = mtile
 
 			if modApiExt_internal.currentTile then -- could be nil
-				for i, hook in ipairs(self.tileHighlightedHooks) do
-					hook(mission, modApiExt_internal.currentTile)
-				end
+				modApiExt_internal.fireTileHighlightedHooks(mission, modApiExt_internal.currentTile)
 			end
 		end
 
@@ -304,42 +341,70 @@ function modApiExtHooks:findAndTrackPods()
 	end
 end
 
-function modApiExtHooks:processRunLater(mission)
-	if modApiExt_internal.runLaterQueue then
-		local q = modApiExt_internal.runLaterQueue
-		local n = #q
-		for i = 1, n do
-			q[i](mission)
-			q[i] = nil
-		end
+--[[
+	Fix for SpaceScript function causing the game to update the tile
+	the damage occurs on. This causes some inconsistency with vanilla
+	game behaviour, most notably self-pushing, self-harming damage
+	instances (eg. Unstable Mech's weapon) setting forests on fire,
+	and the update causing the fire to spread to the mech before it
+	is pushed off the tile.
+--]]
+function GetClosestOffBoardLocation(loc)
+	local minPoint = nil
+	local minDistance = 100
 
-		-- compact the table, if processed hooks also scheduled
-		-- their own runLater functions (but we will process those
-		-- on the next update step)
-		local i = n + 1
-		local j = 0
-		while q[i] do
-			j = j + 1
-			q[j] = q[i]
-			q[i] = nil
-			i = i + 1
+	for y = -1, 8 do
+		for x = -1, 8 do
+			if x == -1 or x == 8 or y == -1 or y == 8 then
+				local point = Point(x, y)
+				local d = loc:Manhattan(point)
+
+				if d < minDistance then
+					minPoint = point
+					minDistance = d
+				end
+			end
 		end
 	end
+
+	return minPoint
 end
 
-function modApiExtHooks:overrideSkill(id, skill)
-	assert(skill.GetSkillEffect)
-	assert(_G[id] == skill) -- no fun allowed
+function SpaceScript(loc, script)
+	local d = SpaceDamage(loc)
+	d.sScript = script
 
-	if modApiExt_internal.oldSkills[id] then
-		error(id .. " is already overridden!")
+	-- Scripts with location set on the board, and added as queued
+	-- damage put a gray stripe pattern on their tile. Setting these
+	-- (or one of them?) to true prevents it from showing up.
+	d.bHide = true
+	d.bHidePath = true
+
+	return d
+end
+
+local function modApiExtGetSkillEffect(self, p1, p2, parentSkill, ...)
+	-- Dereference to weapon object
+	if type(self) == "string" then
+		self = _G[self]
 	end
 
-	modApiExt_internal.oldSkills[id] = skill.GetSkillEffect
+	local isValidSkillTable = parentSkill and type(parentSkill) == "table" and
+	                          type(parentSkill.GetSkillEffect) == "function"
+	local isPrimaryCall = not isValidSkillTable
 
-	skill.GetSkillEffect = function(slf, p1, p2)
-		local skillFx = modApiExt_internal.oldSkills[id](slf, p1, p2)
+	local skillFx = nil
+	if isPrimaryCall then
+		skillFx = modApiExt_internal.oldSkills[self.__Id](self, p1, p2, getmetatable(self), ...)
+	else
+		-- Defer to parent skill's GetSkillEffect.
+		skillFx = modApiExt_internal.oldSkills[parentSkill.__Id](self, p1, p2, getmetatable(parentSkill), ...)
+	end
 
+	-- If it's a secondary call to the GetSkillEffect, then we don't
+	-- want it to fire hooks (since the primary call already fired them).
+	-- For vanilla skills, the additional argument will be ignored.
+	if isPrimaryCall then
 		if not Board.gameBoard then
 			if Board:GetSize() == Point(6, 6) then
 				-- Hacky AF solution to detect when tip image is visible
@@ -354,54 +419,95 @@ function modApiExtHooks:overrideSkill(id, skill)
 			end
 		end
 
+		if not Pawn then
+			-- PAWN is missing, this happens when loading into a game
+			-- in progress in combat. Attempt to fix this by getting the
+			-- pawn at p1.
+			-- This seems to be used only for constructing weapon previews
+			-- for enemies, so even if this is wrong (it shouldn't), it
+			-- should be pretty harmless.
+			Pawn = Board:GetPawn(p1)
+		end
+
 		modApiExt_internal.fireSkillBuildHooks(
 			modApiExt_internal.mission,
-			Pawn, id, p1, p2, skillFx
+			Pawn, self.__Id, p1, p2, skillFx
 		)
 
 		if not skillFx.effect:empty() then
-			local tmp = SkillEffect()
+			local fx = SkillEffect()
+			local effects = extract_table(skillFx.effect)
 
-			tmp:AddScript(
+			fx:AddScript(
 				"modApiExt_internal.fireSkillStartHooks("
 				.."modApiExt_internal.mission, Pawn,"
-				.."unpack("..save_table({id, p1, p2}).."))"
+				.."\""..self.__Id.."\","..p1:GetString()..","..p2:GetString()..")"
 			)
 
-			for _, e in pairs(extract_table(skillFx.effect)) do
-				tmp.effect:push_back(e)
+			for _, e in pairs(effects) do
+				fx.effect:push_back(e)
 			end
 
-			tmp:AddScript(
+			fx:AddScript(
 				"modApiExt_internal.fireSkillEndHooks("
 				.."modApiExt_internal.mission, Pawn,"
-				.."unpack("..save_table({id, p1, p2}).."))"
+				.."\""..self.__Id.."\","..p1:GetString()..","..p2:GetString()..")"
 			)
-			skillFx.effect = tmp.effect
+
+			if
+				self == Prime_Punchmech    or
+				self == Prime_Punchmech_A  or
+				self == Prime_Punchmech_B  or
+				self == Prime_Punchmech_AB
+			then
+				-- Add a dummy damage instance to fix Ramming Speed
+				-- achievement being incorrectly granted
+				fx:AddDamage(SpaceDamage(GetProjectileEnd(p1, p2)))
+			end
+
+			skillFx.effect = fx.effect
 		end
 
 		if not skillFx.q_effect:empty() then
-			local tmp = SkillEffect()
-			tmp:AddScript(
+			local fx = SkillEffect()
+			local effects = extract_table(skillFx.q_effect)
+
+			fx:AddScript(
 				"modApiExt_internal.fireQueuedSkillStartHooks("
 				.."modApiExt_internal.mission, Pawn,"
-				.."unpack("..save_table({id, p1, p2}).."))"
+				.."\""..self.__Id.."\","..p1:GetString()..","..p2:GetString()..")"
 			)
 
-			for _, e in pairs(extract_table(skillFx.q_effect)) do
-				tmp.effect:push_back(e)
+			for _, e in pairs(effects) do
+				fx.effect:push_back(e)
 			end
 
-			tmp:AddScript(
+			fx:AddScript(
 				"modApiExt_internal.fireQueuedSkillEndHooks("
 				.."modApiExt_internal.mission, Pawn,"
-				.."unpack("..save_table({id, p1, p2}).."))"
+				.."\""..self.__Id.."\","..p1:GetString()..","..p2:GetString()..")"
 			)
-			skillFx.q_effect = tmp.effect
-		end
 
-		return skillFx
+			skillFx.q_effect = fx.effect
+		end
 	end
+
+	return skillFx
+end
+
+function modApiExtHooks:overrideSkill(id, skill)
+	assert(skill.GetSkillEffect)
+	assert(_G[id] == skill) -- no fun allowed
+
+	if modApiExt_internal.oldSkills[id] then
+		error(id .. " is already overridden!")
+	end
+
+	modApiExt_internal.oldSkills[id] = skill.GetSkillEffect
+
+	-- Make it possible to identify skills with no ambiguity
+	skill.__Id = id
+	skill.GetSkillEffect = modApiExtGetSkillEffect
 end
 
 function modApiExtHooks:overrideAllSkills()
@@ -451,30 +557,13 @@ modApiExtHooks.missionUpdate = function(mission)
 		modApiExt_internal.mission = mission
 	end
 	if Board and not Board.gameBoard then
-		Board.gameBoard = true 
-	end
-
-	if
-		GAME.elapsedTime and modApiExt_internal.elapsedTime and
-		GAME.elapsedTime < modApiExt_internal.elapsedTime
-	then
-		-- Stored time is less than the timer, so we went back into the past.
-
-		-- Shouldn't trigger on game load, because when we load, the time saved
-		-- in GAME won't be nil, but the one saved in modApiExt_internal *will*.
-		-- And we synchronize them right after that, so they can't diverge.
-
-		-- Also shouldn't trigger when drawing UI which halts the game, since
-		-- both variables are updated together.
-
 		Board.gameBoard = true
-		modApiExt_internal.fireResetTurnHooks(mission)
 	end
-	local t = modApiExt_internal.timer:elapsed()
+
+	local t = modApi:elapsedTime()
 	GAME.elapsedTime = t
 	modApiExt_internal.elapsedTime = t
 
-	modApiExtHooks:processRunLater(mission)
 	modApiExtHooks:updateTiles()
 	modApiExtHooks:trackAndUpdateBuildings(mission)
 	modApiExtHooks:trackAndUpdatePawns(mission)
