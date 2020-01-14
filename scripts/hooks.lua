@@ -5,7 +5,7 @@ local Wolf_MineTiles = {}
 -- Enable this for log messages
 local logging = false
 
--- master table from which HW statistics are copied
+-- master table from which HW statistics are copied, make any balance changes you want here
 local MasterStatsHW = {
 	Sector1 = {
 		Move = 3,
@@ -280,24 +280,8 @@ local function Wolf_OnTimeBreachWarningStart()
     Board:AddEffect(fx)
 end
 
--- Do you believe you can walk on water?
 local function pawnPositionChangedHook(mission, pawn, oldPosition)
-	--[[
-	if _G[pawn:GetType()].Name == "Hive Warrior" then
-		pos = pawn:GetSpace()
-		
-		if Board:GetTerrain(oldPosition) == TERRAIN_WATER then
-			Board:SetTerrain(oldPosition, TERRAIN_ICE)
-			Game:AddTutorial("Tut_Water", pos)
-		end
-	end
 	SetAdaptive(oldPosition, false)
-	
-	if EvoCheck("R") and GAME.HW_WarriorOnBoard then
-		local hw = Board:GetPawn(GAME.HW_WarriorLoc)
-		hw:FireWeapon(GAME.HW_WarriorLoc, 3)
-	end
-	--]]
 end
 
 local function skillStartHook(mission, pawn, weaponId, p1, p2)

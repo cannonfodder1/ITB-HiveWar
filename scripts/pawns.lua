@@ -158,7 +158,7 @@ HiveWarriorFinal = {
 	SkillList = { "Wolf_Reave", "Wolf_Biocannon" },
 	ImpactMaterial = IMPACT_INSECT,
 	SoundLocation = "/enemy/scorpion_2/",
-	Portrait = "enemy/hwportrait_firelit"
+	Portrait = function() return "enemy/"..Wolf_HiveWarriorPortrait or "enemy/hwportrait_normal" end
 }
 AddPawn("HiveWarriorFinal")
 

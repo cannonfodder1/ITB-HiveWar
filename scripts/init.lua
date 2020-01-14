@@ -162,19 +162,6 @@ local function init(self)
         Filename = "science_timeskip",
 		Path = "resources/weapons", 
 		ResourcePath = "weapons",
-	},
-	{
-		Type = "enemy",
-        Name = "HiveGuard",
-        Filename = "hiveguard",
-		Path = "resources/units", 
-		ResourcePath = "units/aliens",
-		Height = 1,
-
-        Default =           { PosX = -18, PosY = -2 },
-        Animated =          { PosX = -18, PosY = -2, NumFrames = 4 },
-        Emerge =            { PosX = 0, PosY = 0, NumFrames = 8 },
-        Death =             { PosX = 0, PosY = 0, NumFrames = 8 },
 	}
 	});
 	
@@ -248,6 +235,17 @@ local function init(self)
 		end
 		return false
 	end)
+	
+	sdlext.addFrameDrawnHook(function(screen)
+		if Game then
+			if ORIGINAL_UNDOTURN_LOCATION == nil then
+				ORIGINAL_UNDOTURN_LOCATION = Location.undo_turn
+			end
+			if GAME.HW_MaxPower ~= 0 then
+				Location.undo_turn = ORIGINAL_UNDOTURN_LOCATION + Point(GAME.HW_MaxPower * 20, 0)
+			end
+		end
+	end)
 end
 
 local function load(self,options,version)
@@ -312,7 +310,7 @@ end
 return {
 	id = "Wolf_HiveWar",
 	name = "Hive War",
-	version = "1.0.0",
+	version = "1.0.3",
 	requirements = { "kf_ModUtils" },
 	icon = "resources/mod_icon.png",
 	init = init,
