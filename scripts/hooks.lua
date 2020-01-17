@@ -40,6 +40,7 @@ local MasterStatsHW = {
 local function onLoad()
 	if Game then
 		GAME.HW_WarriorStats = copy_table(MasterStatsHW)
+		Wolf_UpdateHiveWarriorSprite()
 	end
 end
 
@@ -54,7 +55,9 @@ local function EvoCheck(evo)
 	return false
 end
 
-local function UpdateWarriorSprite()
+function Wolf_UpdateHiveWarriorSprite()
+	if not Game then return end
+
 	local result = "HiveWarrior"
 	local evo1 = GAME.HW_Evolutions[1]
 	local evo2 = GAME.HW_Evolutions[2]
@@ -431,43 +434,6 @@ local function newTurnHook(mission)
 			end
 		end
 	end
-	--[[
-	if logging then LOG("Checking for snap validity!") end
-	if Game:GetTeamTurn() == TEAM_ENEMY and EvoCheck("BCSnap") then
-		if GAME.HW_WarriorOnBoard and not GAME.HW_DeadWarrior and GAME.HW_WarriorLoc ~= nil and EvoCheck("BCSnap") then
-			local hw = Board:GetPawn(GAME.HW_WarriorLoc)
-			local id = hw:GetId()
-			local range = GAME.HW_BioRange
-			if logging then LOG("Beginning snap targeting!") end
-			for dir = DIR_START, DIR_END do
-				local target = GAME.HW_WarriorLoc
-				for i = 1, range do
-					target = target + DIR_VECTORS[dir]
-					local pawn = Board:GetPawn(target)
-					if pawn ~= nil and GAME.Overwatch[id] ~= nil then
-						if pawn:IsMech() and GAME.Overwatch[id].remainingShots > 0 then
-							hw:FireWeapon(target, GAME.Overwatch[id].weaponSlot)
-							GAME.Overwatch[id].remainingShots = GAME.Overwatch[id].remainingShots - 1
-						end
-					end
-				end
-			end
-			for dir = DIR_START, DIR_END do
-				local target = GAME.HW_WarriorLoc
-				for i = 1, range do
-					target = target + DIR_VECTORS[dir]
-					if GAME.Overwatch[id] ~= nil then
-						if Board:IsBuilding(target) and GAME.Overwatch[id].remainingShots > 0 then
-							if logging then LOG("Targeting: "..target.x..","..target.y) end
-							hw:FireWeapon(target, GAME.Overwatch[id].weaponSlot)
-							GAME.Overwatch[id].remainingShots = GAME.Overwatch[id].remainingShots - 1
-						end
-					end
-				end
-			end
-		end
-	end
-	--]]
 end
 
 local function missionUpdateHook(self)
@@ -511,7 +477,7 @@ local function missionStartHook(mission)
 	
 	if logging then LOG("ALL HW VARS RESET") end
 	
-	UpdateWarriorSprite()
+	Wolf_UpdateHiveWarriorSprite()
 end
 
 local function islandChangeHook(island)
@@ -519,8 +485,6 @@ local function islandChangeHook(island)
 		if GAME.HW_PowerUps > 0 then
 			GridImprovement(GAME.HW_PowerUps)
 		end
-		-- ResetTurn button has to be shifted to the right a bit so it doesn't overlap with the increased grid power bar
-		Location["undo_turn"] = Location["undo_turn"] + Point((15 * GAME.HW_PowerUps), 0)
 	end
 	GAME.HW_PowerUps = 0
 	if island > 1 then
@@ -537,7 +501,7 @@ local function islandChangeHook(island)
 			table.remove(GAME.HW_Evolist, (SelectedEvo*2)-1)
 		end
 		
-		UpdateWarriorSprite()
+		Wolf_UpdateHiveWarriorSprite()
 	end
 	GAME.HW_Encounter = nil
 end
@@ -556,6 +520,8 @@ local function preMissionAvailableHook(mission)
 	GAME.HW_WarriorLoc = nil
 	GAME.HW_PodHolder = nil
 	GAME.HW_ObjStatus = nil
+	GAME.HW_Overwatch = {}
+	GAME.HW_OverwatchUndo = {}
 	if logging then LOG("ALL HW VARS RESET") end
 	
 	-- check for warrior upgrades

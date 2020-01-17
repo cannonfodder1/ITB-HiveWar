@@ -4,8 +4,10 @@ local logging = false
 
 function Wolf_DebugArray(array)
 	local num = 0
-	for id, data in pairs(array) do
-		num = num + 1
+	if array ~= nil then
+		for id, data in pairs(array) do
+			num = num + 1
+		end
 	end
 	return num
 end
@@ -133,6 +135,10 @@ end
 -- used to retrieve the array
 function Wolf_GetProfileWeapons()
 	Wolf_ProfileWeapons = modApi:readProfileData("Wolf_Weaponry")
+	if Wolf_ProfileWeapons == nil then
+		Wolf_ProfileWeapons = {}
+		modApi:writeProfileData("Wolf_Weaponry", Wolf_ProfileWeapons)
+	end
 	return Wolf_ProfileWeapons
 end
 

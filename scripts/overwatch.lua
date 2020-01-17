@@ -26,10 +26,10 @@ local function onLoad(tile, pawn)
 	pawnState = pawn
 end
 
---The system stores variables in GAME.Overwatch and GAME.OverwatchUndo. No other script should overwrite those variables.
+--The system stores variables in GAME.HW_Overwatch and GAME.HW_OverwatchUndo. No other script should overwrite those variables.
 local function missionStartHook()
-	GAME.Overwatch = {}
-	GAME.OverwatchUndo = {}
+	GAME.HW_Overwatch = {}
+	GAME.HW_OverwatchUndo = {}
 end
 
 --Refresh a pawn's remaining shots
@@ -37,17 +37,18 @@ local function pawnRefreshOverwatch(pawn)
 	update = true
 	local id = pawn:GetId()
 	local pawnDefaults = _G[pawn:GetType()].ReflexConfig
-	GAME.Overwatch[id].markedTiles = {}
-	GAME.Overwatch[id].remainingShots = pawnDefaults.ShotsTotal or INT_MAX
+	GAME.HW_Overwatch[id].markedTiles = {}
+	GAME.HW_Overwatch[id].remainingShots = pawnDefaults.ShotsTotal or INT_MAX
 	if _G[pawn:GetType()].Name == "Hive Warrior" then
-		GAME.Overwatch[id].remainingShots = GAME.HW_BioAmmo or 1
+		GAME.HW_Overwatch[id].remainingShots = GAME.HW_BioAmmo or 1
 	end
-	GAME.Overwatch[id].shotPawnIds = {}
+	GAME.HW_Overwatch[id].shotPawnIds = {}
 end
 
 local function newTurnHook(self)
-	GAME.OverwatchUndo = {}
-	for id, _ in pairs(GAME.Overwatch) do
+	GAME.HW_OverwatchUndo = {}
+	GAME.HW_Overwatch = GAME.HW_Overwatch or {}
+	for id, _ in pairs(GAME.HW_Overwatch) do
 		pawnRefreshOverwatch(Board:GetPawn(id))
 	end
 end
@@ -60,13 +61,13 @@ local function pawnTrackedHook(mission, pawn)
 	if _G[pawn:GetType()].ReflexConfig ~= nil then
 		local id = pawn:GetId()
 		local pawnDefaults = _G[pawn:GetType()].ReflexConfig
-		GAME.Overwatch[id] = {}
-		GAME.Overwatch[id].range = pawnDefaults.Range or INT_MAX
+		GAME.HW_Overwatch[id] = {}
+		GAME.HW_Overwatch[id].range = pawnDefaults.Range or INT_MAX
 		if _G[pawn:GetType()].Name == "Hive Warrior" then
-			GAME.Overwatch[id].range = GAME.HW_BioRange or 3
+			GAME.HW_Overwatch[id].range = GAME.HW_BioRange or 3
 		end
-		GAME.Overwatch[id].shotsPerPawn = pawnDefaults.ShotsPerPawn or INT_MAX
-		GAME.Overwatch[id].weaponSlot = pawnDefaults.WeaponSlot or 1
+		GAME.HW_Overwatch[id].shotsPerPawn = pawnDefaults.ShotsPerPawn or INT_MAX
+		GAME.HW_Overwatch[id].weaponSlot = pawnDefaults.WeaponSlot or 1
 		pawnRefreshOverwatch(pawn)
 	end
 end
@@ -74,7 +75,7 @@ end
 local function pawnUntrackedHook(mission, pawn)
 	update = true
 	if logging then LOG("(".. pawn:GetId() ..") ".. _G[pawn:GetType()].Name .." just disappeared from tile (".. pawn:GetSpace().x ..", ".. pawn:GetSpace().y ..")") end
-	GAME.Overwatch[pawn:GetId()] = nil
+	GAME.HW_Overwatch[pawn:GetId()] = nil
 end
 
 local function pawnMoveStartHook(mission, defender)
@@ -89,15 +90,15 @@ end
 
 local function pawnUndoMoveHook(mission, defender, oldPosition)
 	local def_id = defender:GetId()
-	local att_id = GAME.OverwatchUndo[def_id]
+	local att_id = GAME.HW_OverwatchUndo[def_id]
 	undoMove = true
 	--Give back ammunition if this pawn was shot by an overwatch shot during it's movement.
 	if att_id ~= nil then
 		local attacker = Board:GetPawn(att_id)
 		if attacker ~= nil then
 			local defaults = _G[attacker:GetType()].ReflexConfig
-			GAME.Overwatch[att_id].remainingShots = math.min(GAME.Overwatch[att_id].remainingShots + 1, defaults.ShotsTotal)
-			GAME.Overwatch[att_id].shotPawnIds[def_id] = GAME.Overwatch[att_id].shotPawnIds[def_id] - 1
+			GAME.HW_Overwatch[att_id].remainingShots = math.min(GAME.HW_Overwatch[att_id].remainingShots + 1, defaults.ShotsTotal)
+			GAME.HW_Overwatch[att_id].shotPawnIds[def_id] = GAME.HW_Overwatch[att_id].shotPawnIds[def_id] - 1
 			if logging then LOG("(".. def_id ..") ".. _G[Board:GetPawn(def_id):GetType()].Name .." undid movement, and gave back ammo to ".. _G[Board:GetPawn(att_id):GetType()].Name) end
 		end
 		
@@ -133,10 +134,10 @@ end
 
 local function missionUpdateHook()
 	--Continuously mark reflex tiles.
-	for id, _ in pairs(GAME.Overwatch) do
-		GAME.Overwatch = GAME.Overwatch or {}
-		GAME.OverwatchUndo = GAME.OverwatchUndo or {}
-		for _, mark in ipairs(GAME.Overwatch[id].markedTiles) do
+	for id, _ in pairs(GAME.HW_Overwatch) do
+		GAME.HW_Overwatch = GAME.HW_Overwatch or {}
+		GAME.HW_OverwatchUndo = GAME.HW_OverwatchUndo or {}
+		for _, mark in ipairs(GAME.HW_Overwatch[id].markedTiles) do
 			if not Board:IsItem(mark) and not Board:IsEnvironmentDanger(mark) then
 				Board:MarkSpaceImage(mark, "combat/tile_icon/reflexmark.png", GL_Color(60,110,220,0.75))
 				Board:MarkSpaceDesc(mark, "reflex_mark")
@@ -148,20 +149,20 @@ local function missionUpdateHook()
 		reflexReady = false
 		local def_id = targetMech:GetId()
 		local curr = targetMech:GetSpace()
-		for att_id, _ in pairs(GAME.Overwatch) do
-			if GAME.Overwatch[att_id].remainingShots > 0 then
+		for att_id, _ in pairs(GAME.HW_Overwatch) do
+			if GAME.HW_Overwatch[att_id].remainingShots > 0 then
 				local attacker = Board:GetPawn(att_id)
 				local shotfrom = attacker:GetSpace()
-				local shotPawnIds = GAME.Overwatch[att_id].shotPawnIds
-				local WeaponSlot = GAME.Overwatch[att_id].weaponSlot
+				local shotPawnIds = GAME.HW_Overwatch[att_id].shotPawnIds
+				local WeaponSlot = GAME.HW_Overwatch[att_id].weaponSlot
 				shotPawnIds[def_id] = shotPawnIds[def_id] or 0
 				if logging then LOG("Preparing reflex shot using weapon in slot "..WeaponSlot.."!") end
-				for _, mark in ipairs(GAME.Overwatch[att_id].markedTiles) do
-					if curr == mark and shotPawnIds[def_id] < GAME.Overwatch[att_id].shotsPerPawn then
+				for _, mark in ipairs(GAME.HW_Overwatch[att_id].markedTiles) do
+					if curr == mark and shotPawnIds[def_id] < GAME.HW_Overwatch[att_id].shotsPerPawn then
 						if not Board:IsSmoke(shotfrom) and Board:GetTerrain(shotfrom) ~= TERRAIN_WATER then
 							attacker:FireWeapon(curr, WeaponSlot)
 							shotPawnIds[def_id] = shotPawnIds[def_id] + 1
-							GAME.Overwatch[att_id].remainingShots = GAME.Overwatch[att_id].remainingShots - 1
+							GAME.HW_Overwatch[att_id].remainingShots = GAME.HW_Overwatch[att_id].remainingShots - 1
 							
 							if not curr.IsPod then tileState:Save(curr) end
 							if logging then LOG("Pilot: "..targetMech:GetPersonality()) end
@@ -189,8 +190,8 @@ local function missionUpdateHook()
 						end
 						--LOGGING---------------------------------------------------------------------
 						if logging then LOG("(".. att_id ..") ".. _G[attacker:GetType()].Name .." shoots at (".. def_id ..") ".. _G[targetMech:GetType()].Name) end
-						for id, _ in pairs(GAME.Overwatch[att_id].shotPawnIds) do
-							if logging then LOG("(".. id ..") ".. _G[Board:GetPawn(id):GetType()].Name .." has been shot ".. GAME.Overwatch[att_id].shotPawnIds[id] .." times.") end
+						for id, _ in pairs(GAME.HW_Overwatch[att_id].shotPawnIds) do
+							if logging then LOG("(".. id ..") ".. _G[Board:GetPawn(id):GetType()].Name .." has been shot ".. GAME.HW_Overwatch[att_id].shotPawnIds[id] .." times.") end
 						end
 						------------------------------------------------------------------------------
 					
@@ -198,7 +199,7 @@ local function missionUpdateHook()
 						--This would have to be done better if the system should be expanded
 						--in a way that allows more than one overwatch shot to be taken in a single move action.
 						if targetMech:IsUndoPossible() then
-							GAME.OverwatchUndo[def_id] = att_id
+							GAME.HW_OverwatchUndo[def_id] = att_id
 						end
 						--If undo is not done, we won't bother to clear this until next turn.
 					end
@@ -211,15 +212,15 @@ local function missionUpdateHook()
 	update = false
 	undoMove = false
 	
-	for id, _ in pairs(GAME.Overwatch) do --Unusable until we can detect ResetTurn/undoturn
+	for id, _ in pairs(GAME.HW_Overwatch) do --Unusable until we can detect ResetTurn/undoturn
 		--Clear markedTiles and rebuild the tables.
-		GAME.Overwatch[id].markedTiles = {}
+		GAME.HW_Overwatch[id].markedTiles = {}
 		local pawn = Board:GetPawn(id)
 		local pawnPos = pawn:GetSpace()
-		GAME.Overwatch[id].pos = pawnPos
-		if not pawn:IsFrozen() and not Board:IsSmoke(pawnPos) and Board:GetTerrain(pawnPos) ~= TERRAIN_WATER and GAME.Overwatch[id].remainingShots > 0 then
+		GAME.HW_Overwatch[id].pos = pawnPos
+		if not pawn:IsFrozen() and not Board:IsSmoke(pawnPos) and Board:GetTerrain(pawnPos) ~= TERRAIN_WATER and GAME.HW_Overwatch[id].remainingShots > 0 then
 			for dir = DIR_START, DIR_END do
-				for k = 1, GAME.Overwatch[id].range do
+				for k = 1, GAME.HW_Overwatch[id].range do
 					local curr = DIR_VECTORS[dir]*k + pawnPos
 				
 					if not Board:IsValid(curr) then
@@ -230,11 +231,11 @@ local function missionUpdateHook()
 					end
 					if Board:IsBlocked(curr, PATH_PROJECTILE) then
 						if Board:IsPawnSpace(curr) and moveDone then
-							table.insert(GAME.Overwatch[id].markedTiles, curr)
+							table.insert(GAME.HW_Overwatch[id].markedTiles, curr)
 						end
 						break
 					end
-					table.insert(GAME.Overwatch[id].markedTiles, curr)
+					table.insert(GAME.HW_Overwatch[id].markedTiles, curr)
 				end
 			end
 		end

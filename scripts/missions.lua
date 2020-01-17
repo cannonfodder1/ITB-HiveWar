@@ -133,7 +133,9 @@ function Mission:BaseCompletedObjectives()
 				obj = Objective("Defeat the Hive Warrior (Improved Grid next Island!)", 1, 1)
 				obj.category = -3
 			end
-			ret = add_arrays(ret, {obj})
+			if add_arrays ~= nil then
+				ret = add_arrays(ret, {obj})
+			end
 		else
 			if GetSector() == 4 then
 				obj = Objective("Defeat the Hive Warrior (Escaped!)", 0, 1)

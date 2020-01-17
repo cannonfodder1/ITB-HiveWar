@@ -2,6 +2,17 @@
 TODO LIST
 - better AI
 - more dialog lines
+BUGS LIST
++ ./mods/reflexivefire/scripts/overwatch.lua:34: attempt to index local 'pawnDefaults' (a nil value)
++ ./mods/HiveWar/scripts/missions.lua:136: attempt to call global 'add_arrays' (a nil value).
++ ./mods/HiveWar/scripts/profiledata.lua:7: bad argument #1 to 'pairs' (table expected, got nil)
++ Something went wrong in HiveWarriorFinal::GetPortrait
++ Hive Warrior AI is being stupid and not attacking
++ Reloading the game wipes the sprite variations
+- Acid evo always active?
+- Reflex fire against mechs not being undone?
+- Reflex lethal friendly fire not being undone?
+- Reflex friendly fire vs burrowers probably not being undone?
 --]]
 
 local Wolf_HWInfo = nil
@@ -310,7 +321,7 @@ end
 return {
 	id = "Wolf_HiveWar",
 	name = "Hive War",
-	version = "1.0.3",
+	version = "1.0.5",
 	requirements = { "kf_ModUtils" },
 	icon = "resources/mod_icon.png",
 	init = init,

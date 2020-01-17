@@ -41,7 +41,9 @@ HiveWarrior = {
 	SkillList = { "Wolf_Reave", "Wolf_Biocannon" },
 	ImpactMaterial = IMPACT_INSECT,
 	SoundLocation = "/enemy/scorpion_2/",
-	GetPortrait = function() return "enemy/"..Wolf_HiveWarriorPortrait or "enemy/hwportrait_normal" end
+	GetPortrait = function()
+		if Wolf_HiveWarriorPortrait ~= nil then return "enemy/"..Wolf_HiveWarriorPortrait else return "enemy/hwportrait_normal" end
+	end
 }
 AddPawn("HiveWarrior")
 
@@ -115,6 +117,7 @@ function HiveWarrior:ScorePositioning(point, pawn)
 		if Board:GetTerrain(target) == TERRAIN_LAVA then rangedScore = rangedScore - 5 end
 		
 		-- Don't stand anywhere near the horrible shit
+		--[[
 		for dir = DIR_START, DIR_END do
 			targetadjacent = target + DIR_VECTORS[dir]
 			if targetadjacent ~= target then
@@ -125,6 +128,8 @@ function HiveWarrior:ScorePositioning(point, pawn)
 				--if Board:IsDangerousItem(targetadjacent) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
 			end
 		end
+		--]]
+		-- Disabled because it too often led to situations where the Hive Warrior would be a coward and refuse to attack
 	end
 	
 	local edge1 = point.x == 0 or point.x == 7
@@ -158,7 +163,9 @@ HiveWarriorFinal = {
 	SkillList = { "Wolf_Reave", "Wolf_Biocannon" },
 	ImpactMaterial = IMPACT_INSECT,
 	SoundLocation = "/enemy/scorpion_2/",
-	Portrait = function() return "enemy/"..Wolf_HiveWarriorPortrait or "enemy/hwportrait_normal" end
+	GetPortrait = function()
+		if Wolf_HiveWarriorPortrait ~= nil then return "enemy/"..Wolf_HiveWarriorPortrait else return "enemy/hwportrait_normal" end
+	end
 }
 AddPawn("HiveWarriorFinal")
 
@@ -232,6 +239,7 @@ function HiveWarriorFinal:ScorePositioning(point, pawn)
 		if Board:GetTerrain(target) == TERRAIN_LAVA then rangedScore = rangedScore - 5 end
 		
 		-- Don't stand anywhere near the horrible shit
+		--[[
 		for dir = DIR_START, DIR_END do
 			targetadjacent = target + DIR_VECTORS[dir]
 			if targetadjacent ~= target then
@@ -242,6 +250,8 @@ function HiveWarriorFinal:ScorePositioning(point, pawn)
 				--if Board:IsDangerousItem(targetadjacent) then rangedScore = rangedScore - 10 end -- Land mines and freeze mines
 			end
 		end
+		--]]
+		-- Disabled because it too often led to situations where the Hive Warrior would be a coward and refuse to attack
 	end
 	
 	local edge1 = point.x == 0 or point.x == 7
@@ -268,7 +278,9 @@ HiveWarriorProxy = {
 	SkillList = { },
 	ImpactMaterial = IMPACT_INSECT,
 	SoundLocation = "/enemy/scorpion_2/",
-	Portrait = "enemy/hivewarrior_portrait"
+	GetPortrait = function()
+		if Wolf_HiveWarriorPortrait ~= nil then return "enemy/"..Wolf_HiveWarriorPortrait else return "enemy/hwportrait_normal" end
+	end
 }
 AddPawn("HiveWarriorProxy")
 
