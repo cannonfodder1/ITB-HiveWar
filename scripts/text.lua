@@ -1,14 +1,6 @@
 -- Weapon text is stored here
 
 local Texts = {
-	Wolf_Reave_Name = "Talons and Biocannon",
-	Wolf_Reave_Description = "Press W to view the Hive Warrior's current stats.", 
-	Wolf_ReflexReave_Name = "Talons and Biocannon",
-	Wolf_ReflexReave_Description = "Press W to view the Hive Warrior's current stats.", 
-
-	Wolf_Biocannon_Name = "This is a bug",
-	Wolf_Biocannon_Description = "You shouldn't be seeing this, report to NotSoLoneWolf immediately.", 
-
 	Tut_Breach_Title = "Hive Warrior",
 	Tut_Breach_Text = "The Hive Warrior is a complicated opponent with a variety of stats. Press W to bring up the info panel for more information.",
 

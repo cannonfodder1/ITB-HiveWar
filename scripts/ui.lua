@@ -377,6 +377,7 @@ end
 --      PREPARE TIMELINE        --
 ----------------------------------
 
+--[[
 function quitPT(response)
 	--LOG(response)
 end
@@ -614,9 +615,9 @@ function Wolf_PrepTimeline:create(screen, uiRoot)
 		return true
 	end
 end
-
+--]]
 return {
     Wolf_HWInfo = Wolf_HWInfo,
     Wolf_HWBreach = Wolf_HWBreach,
-    Wolf_PrepTimeline = Wolf_PrepTimeline
+    --Wolf_PrepTimeline = Wolf_PrepTimeline
 }

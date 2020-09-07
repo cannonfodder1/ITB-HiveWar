@@ -78,6 +78,8 @@ end
 
 --Reave
 Wolf_Reave = {
+	Name = "Talons and Biocannon",
+	Description = "Press W to view the Hive Warrior's current stats.",
 	GetDamage = function() return GAME.HW_ReaveDmg or 1 end,
 	PathSize = 1,
 	Icon = "weapons/enemy_scorpion1.png",	
@@ -157,7 +159,9 @@ end
 
 -------------------------------------------------------
 --Biocannon
-Wolf_Biocannon = 	{
+Wolf_Biocannon = {
+	Name = "Hidden Weapon",
+	Description = "You shouldn't be seeing this weapon description, please file a bug report.",
 	GetDamage = function() return GAME.HW_BioDmg or 2 end,
 	PathSize = 1,
 	Class = "Enemy",

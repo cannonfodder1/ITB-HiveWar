@@ -202,6 +202,7 @@ local function init(self)
 		}
 	)
 	
+	--[[
 	if modApi:readProfileData("Wolf_Weaponry") == nil then
 		--LOG("HIVE WAR PROFILE DATA NOT FOUND!")
 		Wolf_ProfileWeapons = {}
@@ -213,6 +214,7 @@ local function init(self)
 	
 	require(self.scriptPath.."profiledata")
 	Wolf_InitializeWeaponry()
+	--]]
 	
 	require(self.scriptPath.."deco_HWcheckbox")
 	local uiModule = require(self.scriptPath.."ui")
@@ -221,14 +223,14 @@ local function init(self)
 	Wolf_HWInfo:init(self)
 	Wolf_HWInfo.visible = false
 	
-	Wolf_PrepTimeline = uiModule.Wolf_PrepTimeline
-	Wolf_PrepTimeline:init(self)
-	Wolf_PrepTimeline.visible = false
+	--Wolf_PrepTimeline = uiModule.Wolf_PrepTimeline
+	--Wolf_PrepTimeline:init(self)
+	--Wolf_PrepTimeline.visible = false
 
 	sdlext.addUiRootCreatedHook(function(screen, uiRoot)
 		Wolf_HWInfo:create(screen, uiRoot)
 			:bringToTop()
-		Wolf_PrepTimeline:create(screen, uiRoot)
+		--Wolf_PrepTimeline:create(screen, uiRoot)
 			--:bringToTop()
 	end)
 	
@@ -252,16 +254,12 @@ local function init(self)
 			if ORIGINAL_UNDOTURN_LOCATION == nil then
 				ORIGINAL_UNDOTURN_LOCATION = Location.undo_turn
 			end
-			if GAME.HW_MaxPower ~= 0 then
+			if GAME.HW_MaxPower ~= nil then
 				Location.undo_turn = ORIGINAL_UNDOTURN_LOCATION + Point(GAME.HW_MaxPower * 20, 0)
 			end
 		end
 	end)
-end
-
-local function load(self,options,version)
-	Wolf_HWInfo.hotkey = options["hotkey"].value
-	Wolf_HiveWarriorPortrait = options["portrait"].value
+	
 	-- load up the rest of the mod
 	modApi:addWeapon_Texts(require(self.scriptPath.."text"))
 	require(self.scriptPath.."weapons")
@@ -269,6 +267,11 @@ local function load(self,options,version)
 	require(self.scriptPath.."missions")
 	require(self.scriptPath.."dialogs")
 	require(self.scriptPath.."personalities")
+end
+
+local function load(self,options,version)
+	Wolf_HWInfo.hotkey = options["hotkey"].value
+	Wolf_HiveWarriorPortrait = options["portrait"].value
 	
 	HiveWar_modApiExt:load(self, options, version)
 	-- Create the code hooks needed for our mod
@@ -321,7 +324,7 @@ end
 return {
 	id = "Wolf_HiveWar",
 	name = "Hive War",
-	version = "1.0.5",
+	version = "1.1.0",
 	requirements = { "kf_ModUtils" },
 	icon = "resources/mod_icon.png",
 	init = init,

@@ -141,6 +141,7 @@ local function missionUpdateHook()
 			if not Board:IsItem(mark) and not Board:IsEnvironmentDanger(mark) then
 				Board:MarkSpaceImage(mark, "combat/tile_icon/reflexmark.png", GL_Color(60,110,220,0.75))
 				Board:MarkSpaceDesc(mark, "reflex_mark")
+				--if logging then LOG("Marking tile "..mark.x.."/"..mark.y) end
 			end
 		end
 	end
