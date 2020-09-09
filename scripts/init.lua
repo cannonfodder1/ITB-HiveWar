@@ -2,13 +2,16 @@
 TODO LIST
 - better AI
 - more dialog lines
+- reflexmark is broke
 BUGS LIST
+(confirmed)
 + ./mods/reflexivefire/scripts/overwatch.lua:34: attempt to index local 'pawnDefaults' (a nil value)
 + ./mods/HiveWar/scripts/missions.lua:136: attempt to call global 'add_arrays' (a nil value).
 + ./mods/HiveWar/scripts/profiledata.lua:7: bad argument #1 to 'pairs' (table expected, got nil)
 + Something went wrong in HiveWarriorFinal::GetPortrait
 + Hive Warrior AI is being stupid and not attacking
 + Reloading the game wipes the sprite variations
+(reported)
 - Acid evo always active?
 - Reflex fire against mechs not being undone?
 - Reflex lethal friendly fire not being undone?

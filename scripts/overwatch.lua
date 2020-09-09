@@ -139,7 +139,7 @@ local function missionUpdateHook()
 		GAME.HW_OverwatchUndo = GAME.HW_OverwatchUndo or {}
 		for _, mark in ipairs(GAME.HW_Overwatch[id].markedTiles) do
 			if not Board:IsItem(mark) and not Board:IsEnvironmentDanger(mark) then
-				Board:MarkSpaceImage(mark, "combat/tile_icon/reflexmark.png", GL_Color(60,110,220,0.75))
+				Board:MarkSpaceImage(mark, "combat/tile_icon/tile_airstrike.png", GL_Color(60,110,220,0.75))
 				Board:MarkSpaceDesc(mark, "reflex_mark")
 				--if logging then LOG("Marking tile "..mark.x.."/"..mark.y) end
 			end
